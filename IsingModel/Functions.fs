@@ -1,6 +1,7 @@
 module IsingModel.Functions
 
 open System
+open FSharpPlus
 open FSharpPlus.Data
 open Tensor
 
@@ -28,11 +29,31 @@ let calculateEnergy (constants: Constants.Constants) (spins: Tensor<float>) =
     let mu = constants.mu
     let H = constants.H
 
+    let get = Tensor.get spins
+
+    let adj (coords: int64 []) =
+        [ [ coords.[0]
+            + 1L
+            + spins.Shape.[0] % spins.Shape.[0]
+            coords.[1] ]
+          [ coords.[0] - 1L
+            + spins.Shape.[0] % spins.Shape.[0]
+            coords.[1] ]
+          [ coords.[0]
+            coords.[1]
+            + 1L
+            + spins.Shape.[1] % spins.Shape.[0] ]
+          [ coords.[0]
+            coords.[1] - 1L
+            + spins.Shape.[1] % spins.Shape.[0] ] ]
+
     let neighbourSum =
-        (spins |> TensorExtensions.roll [ 1L; 0L ])
-        + (spins |> TensorExtensions.roll [ -1L; 0L ])
-        + (spins |> TensorExtensions.roll [ 0L; 1L ])
-        + (spins |> TensorExtensions.roll [ 0L; -1L ])
+        //        (spins |> TensorExtensions.roll [| 1L; 0L |])
+//        + (spins |> TensorExtensions.roll [| -1L; 0L |])
+//        + (spins |> TensorExtensions.roll [| 0L; 1L |])
+//        + (spins |> TensorExtensions.roll [| 0L; -1L |])
+        spins
+        |> HostTensor.mapi (fun coords _ -> adj coords |> map get |> sum)
 
     (-0.5 * J * spins * neighbourSum - mu * H * spins)
     |> Tensor.sum
